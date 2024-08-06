@@ -1,0 +1,212 @@
+openapi: 3.0.0
+info:
+  title: TodoApp API
+  version: 1.0.0
+  description: API for TodoApp.
+servers:
+  - url: "http://localhost:8080/v1"
+    description: 開発環境
+  - url: "https://api.todoapp.com/v1"
+    description: 本番環境
+security:
+  - Bearer: []
+tags:
+  - name: todo
+    description: TODO関連のAPI
+paths:
+  /todo:
+    get:
+      tags: [todo]
+      summary: TODO一覧取得
+      description: >
+        TODO一覧を取得する
+      parameters:
+        - $ref: "#/components/parameters/todo_status"
+        - $ref: "#/components/parameters/per_page"
+        - $ref: "#/components/parameters/page"
+      responses:
+        "200":
+          $ref: "#/components/responses/get_todo_list_success"
+    post:
+      tags: [todo]
+      summary: TODO作成
+      description: >
+        TODOを作成する
+      requestBody:
+        $ref: "#/components/requestBodies/create_todo"
+      responses:
+        "200":
+          $ref: "#/components/responses/create_todo_success"
+    put:
+      tags: [todo]
+      summary: TODO更新
+      description: >
+        TODOを更新する
+      requestBody:
+        $ref: "#/components/requestBodies/update_todo"
+      responses:
+        "200":
+          $ref: "#/components/responses/update_todo_success"
+    delete:
+      tags: [todo]
+      summary: TODO削除
+      description: >
+        TODOを削除する
+      responses:
+        "200":
+          description: 成功時
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: OK
+components:
+  requestBodies:
+    create_todo:
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - title
+            properties:
+              title:
+                type: string
+              description:
+                type: string
+    update_todo:
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/todo"
+  responses:
+    create_todo_success:
+      description: 成功時
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/todo"
+    get_todo_list_success:
+      description: 成功時
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - todos
+            properties:
+              todos:
+                type: array
+                items:
+                  $ref: "#/components/schemas/todo"
+              pages:
+                $ref: "#/components/schemas/pages"
+    unauthorized_error:
+      description: 認証エラー
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                example: Unauthorized
+    update_todo_success:
+      description: 成功時
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/todo"
+  parameters:
+    page:
+      name: page
+      in: query
+      description: ページ番号
+      required: false
+      schema:
+        type: integer
+        default: 1
+    per_page:
+      name: per_page
+      in: query
+      description: 1ページあたりの表示数
+      required: false
+      schema:
+        type: integer
+        default: 20
+    todo_status:
+      name: status
+      in: query
+      description: >
+        TODOのステータス
+        指定がない場合は全てのステータスを取得
+      required: false
+      schema:
+        type: string
+      examples:
+        todo:
+          value: todo
+        in_progress:
+          value: in_progress
+        completed:
+          value: completed
+  schemas:
+    pages:
+      type: object
+      properties:
+        total:
+          type: integer
+        current:
+          type: integer
+        next:
+          type: integer
+        prev:
+          type: integer
+    user:
+      type: object
+      properties:
+        id:
+          type: integer
+        google_id:
+          type: string
+        email:
+          type: string
+        username:
+          type: string
+        profile_picture:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        oauth_token:
+          type: string
+        oauth_refresh_token:
+          type: string
+    todo:
+      properties:
+        id:
+          type: integer
+        user_id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum:
+            - todo
+            - in_progress
+            - completed
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
