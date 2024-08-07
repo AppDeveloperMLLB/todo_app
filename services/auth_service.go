@@ -37,7 +37,7 @@ func (s *MyAppService) LoginService() string {
 
 // GoogleCallbackService - Googleのコールバック
 func (s *MyAppService) GoogleCallbackService(state string, code string) (models.User, error) {
-	return repositories.HandleGoogleCallback(state, code)
+	return repositories.HandleGoogleCallback(s.db, state, code)
 }
 
 // func HandleGoogleCallback(state string, code string) (string, error) {

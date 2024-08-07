@@ -2,7 +2,9 @@ package repositories
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"log"
 	"os"
 
@@ -10,6 +12,7 @@ import (
 	"github.com/AppDeveloperMLLB/todo_app/models"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
+	"google.golang.org/api/idtoken"
 )
 
 const (
@@ -39,7 +42,7 @@ func GetAuthCodeURL() string {
 }
 
 // HandleGoogleCallback - Googleのコールバック
-func HandleGoogleCallback(state string, code string) (models.User, error) {
+func HandleGoogleCallback(db *sql.DB, state string, code string) (models.User, error) {
 	if state != oauthStateString {
 		log.Printf("invalid oauth state, expected '%s', got '%s'\n", oauthStateString, state)
 		return models.User{}, apperrors.InvalidOauthState.Wrap(nil, "invalid oauth state")
@@ -52,10 +55,33 @@ func HandleGoogleCallback(state string, code string) (models.User, error) {
 		return models.User{}, apperrors.OauthConfExchangeFailed.Wrap(err, "oauthConf.Exchange() failed")
 	}
 
-	idToken, ok := token.Extra("id_token").(string)
+	bearerToken, ok := token.Extra("id_token").(string)
 	if !ok {
 		log.Println("No id_token field in oauth2 token.")
 		return models.User{}, apperrors.NoIdToken.Wrap(nil, "No id_token field in oauth2 token")
+	}
+
+	tokenValidator, err := idtoken.NewValidator(context.Background())
+	if err != nil {
+		err = apperrors.CreateValidatorFailed.Wrap(
+			err,
+			"internal auth error",
+		)
+		return models.User{}, err
+	}
+
+	clientID := os.Getenv("CLIENT_ID")
+	payload, err := tokenValidator.Validate(context.Background(), bearerToken, clientID)
+	if err != nil {
+		log.Println("validate failed")
+		err = apperrors.Unauthorized.Wrap(err, "invalid token")
+		return models.User{}, err
+	}
+
+	googleUserId, ok := payload.Claims["sub"].(string)
+	if !ok {
+		err = apperrors.Unauthorized.Wrap(errors.New("invalid token"), "invalid token")
+		return models.User{}, err
 	}
 
 	client := oauthConf.Client(context.Background(), token)
@@ -68,6 +94,58 @@ func HandleGoogleCallback(state string, code string) (models.User, error) {
 
 	var user models.User
 	json.NewDecoder(userInfo.Body).Decode(&user)
-	user.Token = idToken
+	// userinfoのIDとTokenから取得するIDが異なるため、Tokenから取得したIDを使用する
+	user.ID = googleUserId
+	user.Token = bearerToken
+
+	err = updateUser(db, user)
+	if err != nil {
+		return models.User{}, err
+	}
+
 	return user, nil
+}
+
+func updateUser(db *sql.DB, user models.User) error {
+	getUserSQL := "SELECT * FROM users WHERE google_user_id = $1;"
+
+	var userID int
+	var existUser models.User
+	var createdAt sql.NullTime
+	var updatedAt sql.NullTime
+	err := db.QueryRow(getUserSQL, user.ID).Scan(
+		&userID,
+		&existUser.ID,
+		&existUser.Email,
+		&existUser.Name,
+		&existUser.Picture,
+		&createdAt,
+		&updatedAt,
+	)
+	// エラーがなく、ユーザーのデータが存在するのでなにもしない
+	if err == nil {
+		return nil
+	}
+
+	// データがないエラーではなく、別のエラーが発生した場合はエラーを返す
+	if !errors.Is(err, sql.ErrNoRows) {
+		return err
+	}
+
+	// ユーザーが存在しない場合は新規登録する
+	insertUserSQL := `
+		INSERT INTO users (
+			google_user_id, email, username, profile_picture, created_at, updated_at
+		) VALUES (
+		 	$1, $2, $3, $4, NOW(), NOW()
+		) RETURNING id;
+	`
+
+	var newID int
+	err = db.QueryRow(insertUserSQL, user.ID, user.Email, user.Name, user.Picture).Scan(&newID)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
