@@ -78,7 +78,7 @@ func HandleGoogleCallback(db *sql.DB, state string, code string) (models.User, e
 		return models.User{}, err
 	}
 
-	googleUserId, ok := payload.Claims["sub"].(string)
+	googleUserID, ok := payload.Claims["sub"].(string)
 	if !ok {
 		err = apperrors.Unauthorized.Wrap(errors.New("invalid token"), "invalid token")
 		return models.User{}, err
@@ -95,7 +95,7 @@ func HandleGoogleCallback(db *sql.DB, state string, code string) (models.User, e
 	var user models.User
 	json.NewDecoder(userInfo.Body).Decode(&user)
 	// userinfoのIDとTokenから取得するIDが異なるため、Tokenから取得したIDを使用する
-	user.ID = googleUserId
+	user.ID = googleUserID
 	user.Token = bearerToken
 
 	err = updateUser(db, user)

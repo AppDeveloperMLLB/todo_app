@@ -36,7 +36,7 @@ func ErrorHandler(w http.ResponseWriter, req *http.Request, err error) {
 		statusCode = http.StatusBadRequest
 	case Unauthorized, InvalidHeader, CreateValidatorFailed:
 		statusCode = http.StatusUnauthorized
-	case NotMatchUser:
+	case NotMatchUser, Forbidden:
 		statusCode = http.StatusForbidden
 	default:
 		statusCode = http.StatusInternalServerError

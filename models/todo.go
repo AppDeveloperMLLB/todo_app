@@ -5,7 +5,7 @@ import "time"
 // Todo - Todoの構造体
 type Todo struct {
 	ID          int       `json:"id"`
-	UserID      int       `json:"user_id"`
+	UserID      string    `json:"user_id"`
 	Title       string    `json:"title"`
 	Description string    `json:"description"`
 	Status      string    `json:"status"`

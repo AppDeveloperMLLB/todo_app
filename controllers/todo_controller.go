@@ -6,7 +6,10 @@ import (
 	"strconv"
 
 	"github.com/AppDeveloperMLLB/todo_app/apperrors"
+	"github.com/AppDeveloperMLLB/todo_app/common"
 	"github.com/AppDeveloperMLLB/todo_app/controllers/services"
+	"github.com/AppDeveloperMLLB/todo_app/models"
+	"github.com/gorilla/mux"
 )
 
 // TodoController - Todoに関するコントローラ
@@ -19,28 +22,23 @@ func NewTodoController(s services.TodoService) *TodoController {
 	return &TodoController{service: s}
 }
 
-// PostArticleHandler - POST /articleのハンドラ
-// func (c *ArticleController) PostArticleHandler(w http.ResponseWriter, req *http.Request) {
-// 	var reqArticle models.Article
-// 	if err := json.NewDecoder(req.Body).Decode(&reqArticle); err != nil {
-// 		err = apperrors.ReqBodyDecodeFailed.Wrap(err, "bad request body")
-// 		apperrors.ErrorHandler(w, req, err)
-// 		return
-// 	}
+// GetTodoHandler - GET /todo/{todo_id}のハンドラ
+func (c *TodoController) GetTodoHandler(w http.ResponseWriter, req *http.Request) {
+	todoID, err := strconv.Atoi(mux.Vars(req)["todo_id"])
+	if err != nil {
+		err = apperrors.BadParam.Wrap(err, "path parameter must be number")
+		apperrors.ErrorHandler(w, req, err)
+		return
+	}
 
-// 	authedUserID := common.GetUserID(req.Context())
-// 	userName := common.GetUserName(req.Context())
-// 	reqArticle.UserID = authedUserID
-// 	reqArticle.UserName = userName
+	todo, err := c.service.GetTodoService(todoID)
+	if err != nil {
+		apperrors.ErrorHandler(w, req, err)
+		return
+	}
 
-// 	article, err := c.service.PostArticleService(reqArticle)
-// 	if err != nil {
-// 		apperrors.ErrorHandler(w, req, err)
-// 		return
-// 	}
-
-// 	json.NewEncoder(w).Encode(article)
-// }
+	json.NewEncoder(w).Encode(todo)
+}
 
 // TodoListHandler - GET /todoのハンドラ
 func (c *TodoController) TodoListHandler(w http.ResponseWriter, req *http.Request) {
@@ -78,6 +76,63 @@ func (c *TodoController) TodoListHandler(w http.ResponseWriter, req *http.Reques
 	}
 
 	json.NewEncoder(w).Encode(todoList)
+}
+
+// CreateTodoHandler - POST /todoのハンドラ
+func (c *TodoController) CreateTodoHandler(w http.ResponseWriter, req *http.Request) {
+	var reqTodo models.Todo
+	if err := json.NewDecoder(req.Body).Decode(&reqTodo); err != nil {
+		err = apperrors.ReqBodyDecodeFailed.Wrap(err, "bad request body")
+		apperrors.ErrorHandler(w, req, err)
+		return
+	}
+
+	userID := common.GetUserID(req.Context())
+	reqTodo.UserID = userID
+
+	todo, err := c.service.CreateTodoService(reqTodo)
+	if err != nil {
+		apperrors.ErrorHandler(w, req, err)
+		return
+	}
+
+	json.NewEncoder(w).Encode(todo)
+}
+
+func (c *TodoController) UpdateTodoHandler(w http.ResponseWriter, req *http.Request) {
+	var reqTodo models.Todo
+	if err := json.NewDecoder(req.Body).Decode(&reqTodo); err != nil {
+		err = apperrors.ReqBodyDecodeFailed.Wrap(err, "bad request body")
+		apperrors.ErrorHandler(w, req, err)
+		return
+	}
+
+	todo, err := c.service.UpdateTodoService(reqTodo)
+	if err != nil {
+		apperrors.ErrorHandler(w, req, err)
+		return
+	}
+
+	json.NewEncoder(w).Encode(todo)
+}
+
+func (c *TodoController) DeleteTodoHandler(w http.ResponseWriter, req *http.Request) {
+	todoID, err := strconv.Atoi(mux.Vars(req)["todo_id"])
+	if err != nil {
+		err = apperrors.BadParam.Wrap(err, "path parameter must be number")
+		apperrors.ErrorHandler(w, req, err)
+		return
+	}
+
+	userID := common.GetUserID(req.Context())
+
+	err = c.service.DeleteTodoService(todoID, userID)
+	if err != nil {
+		apperrors.ErrorHandler(w, req, err)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // // ArticleHandler - GET /article/idのハンドラ

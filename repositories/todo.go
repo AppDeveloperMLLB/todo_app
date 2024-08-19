@@ -6,13 +6,38 @@ import (
 	"github.com/AppDeveloperMLLB/todo_app/models"
 )
 
+// SelectTodo - Todoを取得する
+func SelectTodo(db *sql.DB, todoID int) (models.Todo, error) {
+	const sqlStr = `
+		SELECT * FROM todos WHERE id = $1;
+	`
+
+	row := db.QueryRow(sqlStr, todoID)
+	if err := row.Err(); err != nil {
+		return models.Todo{}, err
+	}
+
+	var todo models.Todo
+	err := row.Scan(&todo.ID, &todo.UserID, &todo.Title, &todo.Description, &todo.Status, &todo.CreatedAt, &todo.UpdatedAt)
+	if err != nil {
+		return models.Todo{}, err
+	}
+
+	return todo, nil
+}
+
 // SelectTodoList - Todo一覧を取得する
 func SelectTodoList(db *sql.DB, page int, perPage int, status string) ([]models.Todo, error) {
 	const sqlStr = `
 		SELECT * FROM todos LIMIT $1 OFFSET $2;
 	`
 
-	rows, err := db.Query(sqlStr, perPage, page)
+	offset := (page - 1) * perPage
+	if page == 0 {
+		offset = 0
+	}
+
+	rows, err := db.Query(sqlStr, perPage, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -38,6 +63,57 @@ func SelectTodoList(db *sql.DB, page int, perPage int, status string) ([]models.
 	}
 
 	return todoArray, nil
+}
+
+// CreateTodo - Todoを登録する
+func CreateTodo(db *sql.DB, todo models.Todo) (models.Todo, error) {
+	const sqlStr = `
+		INSERT INTO todos (user_id, title, description, status, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, now(), now()) returning id, created_at, updated_at;
+	`
+	var newTodoID int
+	var createdAt, updatedAt sql.NullTime
+	err := db.QueryRow(sqlStr, todo.UserID, todo.Title, todo.Description, todo.Status).Scan(&newTodoID, &createdAt, &updatedAt)
+	if err != nil {
+		return models.Todo{}, err
+	}
+
+	todo.ID = newTodoID
+	todo.CreatedAt = createdAt.Time
+	todo.UpdatedAt = updatedAt.Time
+	return todo, nil
+}
+
+// UpdateTodo - Todoを更新する
+func UpdateTodo(db *sql.DB, todo models.Todo) (models.Todo, error) {
+	const sqlStr = `
+		UPDATE todos
+		SET title = $1, description = $2, status = $3, updated_at = now()
+		WHERE id = $4 returning updated_at;
+	`
+
+	var updatedAt sql.NullTime
+	err := db.QueryRow(sqlStr, todo.Title, todo.Description, todo.Status, todo.ID).Scan(&updatedAt)
+	if err != nil {
+		return models.Todo{}, err
+	}
+
+	todo.UpdatedAt = updatedAt.Time
+	return todo, nil
+}
+
+// DeleteTodo - Todoを削除する
+func DeleteTodo(db *sql.DB, todoID int) error {
+	const sqlStr = `
+		DELETE FROM todos WHERE id = $1;
+	`
+
+	_, err := db.Exec(sqlStr, todoID)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // InsertArticle - 記事を登録する

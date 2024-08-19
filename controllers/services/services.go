@@ -6,10 +6,11 @@ import (
 
 // TodoService - Todoに関するサービスのインターフェース
 type TodoService interface {
-	//PostArticleService(article models.Article) (models.Article, error)
-	//GetArticleListService(page int) ([]models.Article, error)
+	GetTodoService(todoID int) (models.Todo, error)
 	GetTodoListService(page int, perPage int) ([]models.Todo, error)
-	//PostNiceService(article models.Article) (models.Article, error)
+	CreateTodoService(todo models.Todo) (models.Todo, error)
+	UpdateTodoService(todo models.Todo) (models.Todo, error)
+	DeleteTodoService(todoID int, userID string) error
 }
 
 // AuthService - 認証に関するサービスのインターフェース

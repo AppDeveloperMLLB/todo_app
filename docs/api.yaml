@@ -14,6 +14,41 @@ tags:
   - name: todo
     description: TODO関連のAPI
 paths:
+  /todo/{todo_id}:
+    get:
+      tags: [todo]
+      summary: TODO取得
+      description: >
+        TODOを取得する
+      parameters:
+        - $ref: "#/components/parameters/todo_id"
+      responses:
+        "200":
+          $ref: "#/components/responses/get_todo_success"
+        "404":
+          description: 該当するTODOが存在しない場合
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/error"
+    delete:
+      tags: [todo]
+      summary: TODO削除
+      description: >
+        TODOを削除する
+      parameters:
+        - $ref: "#/components/parameters/todo_id"
+      responses:
+        "200":
+          description: 成功時
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: OK
   /todo:
     get:
       tags: [todo]
@@ -47,22 +82,6 @@ paths:
       responses:
         "200":
           $ref: "#/components/responses/update_todo_success"
-    delete:
-      tags: [todo]
-      summary: TODO削除
-      description: >
-        TODOを削除する
-      responses:
-        "200":
-          description: 成功時
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: OK
 components:
   requestBodies:
     create_todo:
@@ -104,6 +123,12 @@ components:
                   $ref: "#/components/schemas/todo"
               pages:
                 $ref: "#/components/schemas/pages"
+    get_todo_success:
+      description: 成功時
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/todo"
     unauthorized_error:
       description: 認証エラー
       content:
@@ -137,6 +162,13 @@ components:
       schema:
         type: integer
         default: 20
+    todo_id:
+      name: todo_id
+      in: path
+      description: TODOのID
+      required: true
+      schema:
+        type: integer
     todo_status:
       name: status
       in: query
@@ -154,6 +186,18 @@ components:
         completed:
           value: completed
   schemas:
+    error:
+      type: object
+      required:
+        - err_code
+        - message
+      properties:
+        err_code:
+          type: string
+          example: U000
+        message:
+          type: string
+          example: エラーが発生しました
     pages:
       type: object
       properties:
