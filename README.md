@@ -34,16 +34,33 @@
   - SQL クエリを含むレポジトリ層の関数を呼び出す
   - 呼び出したレポジトリ層の関数から、データベースから取得したデータを受け取る
 
-  ## DB初期化
-  ```
-  docker-compose up -d
-  ```
-
+## DB初期化
+- Containerを起動する
+```
+docker-compose up -d
+```
+- makeコマンドを実行する
+```
+make initialize_db
+```
+### 補足
 PGPASSWORDをつけると、一時的に環境変数を設定できる
 ```zsh
 PGPASSWORD=password
 ```
-
-  ```
-PGPASSWORD=password psql -h  127.0.0.1 -U test -d mindfulbooks_db -f ./db/createTable.sql
+なので、以下のようなコマンドを実行することで、パスワードを入力せずにsqlファイルを実行できる
 ```
+PGPASSWORD=password psql -h  127.0.0.1 -U test -d todo_db -f ./db/createTable.sql
+```
+
+## APIの実行
+テストでAPIを実行したい場合は、Postmanがおすすめ
+一応、api/command.mdにcurlコマンドを記載しているので、curlコマンドでも実行可能
+
+## ER図 命名規則
+- テーブル名は複数形で、スネークケース
+- カラム名は、スネークケース
+- Primary KeyにはPKをつける
+- Foreign KeyにはFKをつける
+- Unique Keyには(UK)をつける
+- Nullableには、nullableをつける
